@@ -1,0 +1,6 @@
+resolver: lts-12.10
+packages:
+    - .
+
+extra-deps:
+    - monad-classes-0.3.2.2

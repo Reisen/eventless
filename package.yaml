@@ -1,0 +1,48 @@
+name:       eventless
+version:    0.1.0.0
+github:     "reisen/eventless"
+license:    MIT
+author:     "Reisen"
+maintainer: "reisen@morphism.org"
+copyright:  "2018 Reisen"
+
+extra-source-files:
+    - README.md
+
+description: Event Sourcing with automatic snapshotting.
+
+dependencies:
+    - base
+    - aeson
+    - containers
+    - monad-classes
+    - mtl
+    - protolude
+    - text
+
+default-extensions:
+    - BangPatterns
+    - ConstraintKinds
+    - DataKinds
+    - DeriveGeneric
+    - FlexibleContexts
+    - FlexibleInstances
+    - GADTs
+    - GeneralizedNewtypeDeriving
+    - LambdaCase
+    - NoImplicitPrelude
+    - OverloadedStrings
+    - PatternSynonyms
+    - RankNTypes
+    - RecordWildCards
+    - ScopedTypeVariables
+    - TemplateHaskell
+    - TupleSections
+    - TypeFamilies
+    - TypeFamilyDependencies
+    - TypeOperators
+    - TypeApplications
+    - ViewPatterns
+
+library:
+  source-dirs: src
