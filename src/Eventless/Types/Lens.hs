@@ -1,6 +1,5 @@
 module Eventless.Types.Lens
-  ( uuid
-  , kind
+  ( kind
   , emitted
   , version
   , eventName
@@ -11,9 +10,6 @@ module Eventless.Types.Lens
 import Protolude
 import qualified Eventless.Types.Event as Event
 
-
-uuid :: Functor f => (Event.UUID -> f Event.UUID) -> (Event.Event -> f Event.Event)
-uuid l e = (\v -> e { Event.uuid = v }) <$> l (Event.uuid e)
 
 kind :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
 kind l e = (\v -> e { Event.kind = v }) <$> l (Event.kind e)
@@ -27,9 +23,9 @@ version l e = (\v -> e { Event.version = v }) <$> l (Event.version e)
 eventName :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
 eventName l e = (\v -> e { Event.eventName = v }) <$> l (Event.eventName e)
 
-eventBody :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
+eventBody :: Functor f => (LText -> f LText) -> (Event.Event -> f Event.Event)
 eventBody l e = (\v -> e { Event.eventBody = v }) <$> l (Event.eventBody e)
 
-snapshot :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
+snapshot :: Functor f => (LText -> f LText) -> (Event.Event -> f Event.Event)
 snapshot l e = (\v -> e { Event.snapshot = v }) <$> l (Event.snapshot e)
 

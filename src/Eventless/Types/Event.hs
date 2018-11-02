@@ -3,7 +3,6 @@ module Eventless.Types.Event
   , Events    (..)
   , Eventless
   , Project   (..)
-  , ToEvent   (..)
   , UUID
   ) where
 
@@ -24,22 +23,13 @@ type UUID = Text
 -- Event produced by a system. This is the type that we
 -- serialize into various backends.
 data Event = Event
-  { uuid      :: UUID
-  , kind      :: Text
+  { kind      :: Text
   , emitted   :: Text
   , version   :: Int
   , eventName :: Text
-  , eventBody :: Text
-  , snapshot  :: Text
+  , eventBody :: LText
+  , snapshot  :: LText
   } deriving Show
-
-
-class ToEvent event where
-  encodeEvent
-    :: ToJSON agg
-    => agg
-    -> event
-    -> Event
 
 
 -- All aggregates are modified by a single event kind, that type must be

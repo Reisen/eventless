@@ -11,20 +11,32 @@ extra-source-files:
 
 description: Event Sourcing with automatic snapshotting.
 
+ghc-options:
+    -Wall
+    -fwarn-tabs
+    -fwarn-unused-imports
+    -fwarn-missing-signatures
+    -fwarn-name-shadowing
+    -fwarn-incomplete-patterns
+
 dependencies:
     - base
     - aeson
     - containers
+    - data-default-class
     - monad-classes
     - mtl
     - protolude
+    - sqlite-simple
     - text
+    - time
 
 default-extensions:
     - BangPatterns
     - ConstraintKinds
     - DataKinds
     - DeriveGeneric
+    - DeriveDataTypeable
     - FlexibleContexts
     - FlexibleInstances
     - GADTs

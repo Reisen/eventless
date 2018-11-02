@@ -16,13 +16,13 @@ data BackendStore = Backend
       :: forall a m. MonadExec IO m
       => FromJSON a
       => UUID
-      -> m (Aggregate a)
+      -> m (Maybe (Aggregate a))
 
   , writeEvents
-      :: forall agg event m. MonadExec IO m
-      => ToJSON event
-      => ToJSON agg
+      :: forall m t.
+         MonadExec IO m
+      => Traversable t
       => UUID
-      -> [(agg, event)]
+      -> t Event
       -> m ()
   }
