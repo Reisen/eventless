@@ -28,4 +28,3 @@ eventBody l e = (\v -> e { Event.eventBody = v }) <$> l (Event.eventBody e)
 
 snapshot :: Functor f => (LText -> f LText) -> (Event.Event -> f Event.Event)
 snapshot l e = (\v -> e { Event.snapshot = v }) <$> l (Event.snapshot e)
-

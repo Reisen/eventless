@@ -13,7 +13,8 @@ import Eventless.Types.Event
 
 data BackendStore = Backend
   { loadAggregate
-      :: forall a m. MonadExec IO m
+      :: forall a m.
+         MonadExec IO m
       => FromJSON a
       => UUID
       -> m (Maybe (Aggregate a))

@@ -1,9 +1,9 @@
 module Eventless
-  ( module Core
-  , module Event
-  , module Example
+  ( module Eventless
   ) where
 
-import Eventless.Core        as Core
-import Eventless.Types.Event as Event
-import Example               as Example
+import Eventless.Commands           as Eventless
+import Eventless.Types.Aggregate    as Eventless
+import Eventless.Types.BackendStore as Eventless
+import Eventless.Types.Commands     as Eventless
+import Eventless.Types.Event        as Eventless

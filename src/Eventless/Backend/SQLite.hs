@@ -82,8 +82,8 @@ createEventsTable =
 
 
 sqliteLoadAggregate
-  :: MonadExec IO m
-  => FromJSON a
+  :: FromJSON a
+  => MonadExec IO m
   => Connection
   -> UUID
   -> m (Maybe (Aggregate a))
@@ -102,8 +102,8 @@ sqliteLoadAggregate conn uuid = do
 
 
 sqliteWriteEvents
-  :: MonadExec IO m
-  => Traversable t
+  :: Traversable t
+  => MonadExec IO m
   => Connection
   -> UUID
   -> t Event
