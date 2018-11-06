@@ -1,23 +1,19 @@
 module Eventless.Commands
-  ( runCommand
-  , emit
+  ( emit
   , loadSnapshot
+  , runCommand
   ) where
 
 
-import Control.Monad.Classes
-import Control.Monad.Writer.Lazy (WriterT, runWriterT)
-import Data.Aeson                (FromJSON, ToJSON)
-import Data.Aeson.Text           (encodeToLazyText)
-import Data.Data                 (Data, toConstr)
-import Data.Default.Class        (Default, def)
-import Data.Time.Clock           (getCurrentTime)
-import Data.Typeable             (Typeable, typeOf)
-import Protolude hiding
-  ( MonadReader
-  , ask
-  )
-
+import Protolude
+import Control.Monad.Writer         (MonadWriter (..))
+import Control.Monad.Writer.Lazy    (WriterT, runWriterT)
+import Data.Aeson                   (FromJSON, ToJSON)
+import Data.Aeson.Text              (encodeToLazyText)
+import Data.Data                    (Data, toConstr)
+import Data.Default.Class           (Default, def)
+import Data.Time.Clock              (getCurrentTime)
+import Data.Typeable                (Typeable, typeOf)
 import Eventless.Types.Aggregate
 import Eventless.Types.BackendStore
 import Eventless.Types.Event
@@ -50,7 +46,7 @@ type ProjectionContext agg m =
   ( Default agg
   , Project agg
   , Typeable agg
-  , MonadExec IO m
+  , MonadIO m
   , Data (Events agg)
   , Typeable (Events agg)
   , FromJSON agg, ToJSON agg
@@ -72,7 +68,7 @@ runCommand backend uuid m = do
   -- from the passed command.
   agg       <- loadAggregate backend uuid
   result    <- snd <$> runWriterT (flip runReaderT (value <$> agg) m)
-  emittedAt <- exec $ getCurrentTime
+  emittedAt <- liftIO getCurrentTime
 
   -- For each event we've mapped, we want to encode and snapshot the
   -- result in our backing store.

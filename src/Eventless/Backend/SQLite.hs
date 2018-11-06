@@ -4,7 +4,6 @@ module Eventless.Backend.SQLite
 
 import Protolude
 import Data.Aeson             (FromJSON, encode, decode)
-import Control.Monad.Classes
 import Database.SQLite.Simple
   ( Connection
   , Only (..)
@@ -73,24 +72,24 @@ makeSQLite3Backend conn =
 
 
 createEventsTable
-  :: MonadExec IO m
+  :: MonadIO m
   => Connection
   -> m ()
 
 createEventsTable =
-  exec . flip execute_ sql_CreateEventsIfNoExist
+  liftIO . flip execute_ sql_CreateEventsIfNoExist
 
 
 sqliteLoadAggregate
   :: FromJSON a
-  => MonadExec IO m
+  => MonadIO m
   => Connection
   -> UUID
   -> m (Maybe (Aggregate a))
 
 sqliteLoadAggregate conn uuid = do
   createEventsTable conn
-  result <- exec $ query conn sql_FetchLatestAggregateUUID (Only uuid)
+  result <- liftIO $ query conn sql_FetchLatestAggregateUUID (Only uuid)
   pure $ do
     (version, agg) <- head result
     decoded        <- decode (toS (agg :: Text))
@@ -103,7 +102,7 @@ sqliteLoadAggregate conn uuid = do
 
 sqliteWriteEvents
   :: Traversable t
-  => MonadExec IO m
+  => MonadIO m
   => Connection
   -> UUID
   -> t Event
@@ -111,7 +110,7 @@ sqliteWriteEvents
 
 sqliteWriteEvents conn uuid events = do
   createEventsTable conn
-  exec $ withTransaction conn $ for_ events $ \Event{..} ->
+  liftIO $ withTransaction conn $ for_ events $ \Event{..} ->
     execute conn sql_WriteEventForUUID
       ( uuid
       , kind

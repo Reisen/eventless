@@ -1,5 +1,5 @@
 name:       eventless
-version:    0.1.0.0
+version:    0.1.0.1
 github:     "reisen/eventless"
 license:    MIT
 author:     "Reisen"
@@ -24,7 +24,6 @@ dependencies:
     - aeson
     - containers
     - data-default-class
-    - monad-classes
     - mtl
     - protolude
     - sqlite-simple

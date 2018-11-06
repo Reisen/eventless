@@ -1,15 +1,14 @@
 module Eventless.Types.Event
   ( Event     (..)
-  , Events    (..)
+  , Events
   , Eventless
   , Project   (..)
   , UUID
   ) where
 
 
-import Protolude hiding (MonadReader)
-import Data.Aeson       (ToJSON)
-import Control.Monad.Classes
+import Protolude
+import Control.Monad.Writer (MonadWriter)
 
 
 -- Aggregates UUID's are GUUID's as far as possible. We

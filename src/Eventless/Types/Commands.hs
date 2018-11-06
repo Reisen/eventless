@@ -3,13 +3,8 @@ module Eventless.Types.Commands
   ) where
 
 
-import Control.Monad.Classes
+import Protolude
 import Control.Monad.Writer.Lazy (WriterT, runWriterT)
-import Protolude hiding
-  ( MonadReader
-  , ask
-  )
-
 import Eventless.Types.Event
 
 
