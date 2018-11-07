@@ -34,13 +34,15 @@ default-extensions:
     - BangPatterns
     - ConstraintKinds
     - DataKinds
-    - DeriveGeneric
     - DeriveDataTypeable
+    - DeriveGeneric
     - FlexibleContexts
     - FlexibleInstances
+    - FunctionalDependencies
     - GADTs
     - GeneralizedNewtypeDeriving
     - LambdaCase
+    - MultiParamTypeClasses
     - NoImplicitPrelude
     - OverloadedStrings
     - PatternSynonyms
@@ -49,10 +51,10 @@ default-extensions:
     - ScopedTypeVariables
     - TemplateHaskell
     - TupleSections
+    - TypeApplications
     - TypeFamilies
     - TypeFamilyDependencies
     - TypeOperators
-    - TypeApplications
     - ViewPatterns
 
 library:

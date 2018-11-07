@@ -1,30 +1,65 @@
 module Eventless.Types.Lens
-  ( kind
+  ( HasVersion (..)
+
+  -- Event Lenses
+  , kind
   , emitted
-  , version
-  , eventName
+  , name
+  , body
   , snapshot
+
+  -- Aggregate Lenses
+  , uuid
+  , value
   ) where
 
-
 import Protolude
-import qualified Eventless.Types.Event as Event
+import Eventless.Types.Aggregate
+import Eventless.Types.Event
 
 
-kind :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
-kind l e = (\v -> e { Event.kind = v }) <$> l (Event.kind e)
 
-emitted :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
-emitted l e = (\v -> e { Event.emitted = v }) <$> l (Event.emitted e)
+-- Create Polymorphic Lens for Version
+--
+class HasVersion s a | s -> a where
+  version :: Functor f => (a -> f a) -> (s -> f s)
 
-version :: Functor f => (Int -> f Int) -> (Event.Event -> f Event.Event)
-version l e = (\v -> e { Event.version = v }) <$> l (Event.version e)
 
-eventName :: Functor f => (Text -> f Text) -> (Event.Event -> f Event.Event)
-eventName l e = (\v -> e { Event.eventName = v }) <$> l (Event.eventName e)
 
-eventBody :: Functor f => (LText -> f LText) -> (Event.Event -> f Event.Event)
-eventBody l e = (\v -> e { Event.eventBody = v }) <$> l (Event.eventBody e)
+-- Create Lenses for Event Fields
+--
+type Lens' s a = Lens s s a a
+type Lens s t a b = forall f. Functor f
+  => (a -> f b)
+  -> (s -> f t)
 
-snapshot :: Functor f => (LText -> f LText) -> (Event.Event -> f Event.Event)
-snapshot l e = (\v -> e { Event.snapshot = v }) <$> l (Event.snapshot e)
+kind :: Lens' Event Text
+kind l e = (\v -> e { eventKind = v }) <$> l (eventKind e)
+
+emitted :: Lens' Event Text
+emitted l e = (\v -> e { eventEmitted = v }) <$> l (eventEmitted e)
+
+instance HasVersion Event Int where
+  version l e = (\v -> e { eventVersion = v }) <$> l (eventVersion e)
+
+name :: Lens' Event Text
+name l e = (\v -> e { eventName = v }) <$> l (eventName e)
+
+body :: Lens' Event LText
+body l e = (\v -> e { eventBody = v }) <$> l (eventBody e)
+
+snapshot :: Lens' Event LText
+snapshot l e = (\v -> e { eventSnapshot = v }) <$> l (eventSnapshot e)
+
+
+
+-- Create Lenses for Aggregate Fields
+--
+uuid :: Lens' (Aggregate a) UUID
+uuid l e = (\v -> e { aggregateUUID = v }) <$> l (aggregateUUID e)
+
+value :: Lens' (Aggregate a) a
+value l e = (\v -> e { aggregateValue = v }) <$> l (aggregateValue e)
+
+instance HasVersion (Aggregate a) Int where
+  version l e = (\v -> e { aggregateVersion = v }) <$> l (aggregateVersion e)

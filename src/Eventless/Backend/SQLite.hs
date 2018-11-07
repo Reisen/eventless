@@ -22,44 +22,6 @@ import Eventless
   )
 
 
-sql_CreateEventsIfNoExist = "\
-\ CREATE TABLE IF NOT EXISTS events ( \
-\   uuid       TEXT     NOT NULL,     \
-\   kind       TEXT     NOT NULL,     \
-\   emitted    TEXT     NOT NULL,     \
-\   version    INTEGER  NOT NULL,     \
-\   event      TEXT     NOT NULL,     \
-\   event_body TEXT     NOT NULL,     \
-\   snapshot   TEXT     NOT NULL      \
-\ )"
-
-
-sql_FetchLatestAggregateUUID = "\
-\ SELECT version, snapshot FROM events \
-\ WHERE uuid = ?                       \
-\ ORDER BY version DESC                \
-\ LIMIT 1                              \
-\ "
-
-
-sql_WriteEventForUUID = "   \
-\ INSERT INTO events        \
-\   ( uuid                  \
-\   , kind                  \
-\   , emitted               \
-\   , version               \
-\   , event                 \
-\   , event_body            \
-\   , snapshot              \
-\   )                       \
-\ VALUES                    \
-\   ( ?, ?, ?, ?, ?, ?, ? ) \
-\ "
-
-
---------------------------------------------------------------------------------
-
-
 makeSQLite3Backend
   :: Connection
   -> BackendStore
@@ -94,9 +56,9 @@ sqliteLoadAggregate conn uuid = do
     (version, agg) <- head result
     decoded        <- decode (toS (agg :: Text))
     pure Aggregate
-      { uuid           = uuid
-      , currentVersion = version
-      , value          = decoded
+      { aggregateUUID    = uuid
+      , aggregateVersion = version
+      , aggregateValue   = decoded
       }
 
 
@@ -113,10 +75,50 @@ sqliteWriteEvents conn uuid events = do
   liftIO $ withTransaction conn $ for_ events $ \Event{..} ->
     execute conn sql_WriteEventForUUID
       ( uuid
-      , kind
-      , emitted
-      , version
+      , eventKind
+      , eventEmitted
+      , eventVersion
       , eventName
       , eventBody
-      , snapshot
+      , eventSnapshot
       )
+
+
+
+-- SQL Statements --------------------------------------------------------------
+
+
+
+sql_CreateEventsIfNoExist = "\
+\ CREATE TABLE IF NOT EXISTS events ( \
+\   uuid       TEXT     NOT NULL,     \
+\   kind       TEXT     NOT NULL,     \
+\   emitted    TEXT     NOT NULL,     \
+\   version    INTEGER  NOT NULL,     \
+\   event      TEXT     NOT NULL,     \
+\   event_body TEXT     NOT NULL,     \
+\   snapshot   TEXT     NOT NULL      \
+\ )"
+
+
+sql_FetchLatestAggregateUUID = "\
+\ SELECT version, snapshot FROM events \
+\ WHERE uuid = ?                       \
+\ ORDER BY version DESC                \
+\ LIMIT 1                              \
+\ "
+
+
+sql_WriteEventForUUID = "   \
+\ INSERT INTO events        \
+\   ( uuid                  \
+\   , kind                  \
+\   , emitted               \
+\   , version               \
+\   , event                 \
+\   , event_body            \
+\   , snapshot              \
+\   )                       \
+\ VALUES                    \
+\   ( ?, ?, ?, ?, ?, ?, ? ) \
+\ "

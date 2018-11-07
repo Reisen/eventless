@@ -11,7 +11,7 @@ import Eventless.Types.Event (UUID)
 -- it allows requesting the value itself as well as metrics about the
 -- value such as its current version.
 data Aggregate a = Aggregate
-  { uuid           :: UUID
-  , value          :: a
-  , currentVersion :: Int
+  { aggregateUUID    :: UUID
+  , aggregateValue   :: a
+  , aggregateVersion :: Int
   } deriving Show

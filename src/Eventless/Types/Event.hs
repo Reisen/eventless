@@ -22,12 +22,12 @@ type UUID = Text
 -- Event produced by a system. This is the type that we
 -- serialize into various backends.
 data Event = Event
-  { kind      :: Text
-  , emitted   :: Text
-  , version   :: Int
-  , eventName :: Text
-  , eventBody :: LText
-  , snapshot  :: LText
+  { eventKind     :: Text
+  , eventEmitted  :: Text
+  , eventVersion  :: Int
+  , eventName     :: Text
+  , eventBody     :: LText
+  , eventSnapshot :: LText
   } deriving Show
 
 

@@ -36,9 +36,9 @@ foldEvents
 
 foldEvents = (fmap . fmap $ snd) $ mapAccumL $ \Aggregate{..} event ->
   (\agg -> (,) agg (event, agg)) Aggregate
-    { uuid  = uuid
-    , value = foldEvent value event
-    , currentVersion = currentVersion + 1
+    { aggregateUUID    = aggregateUUID
+    , aggregateValue   = foldEvent aggregateValue event
+    , aggregateVersion = aggregateVersion + 1
     }
 
 
@@ -66,9 +66,9 @@ runCommand
 runCommand backend uuid m = do
   -- Use the backend to fetch a current aggregate, and produce a new event list
   -- from the passed command.
-  agg       <- loadAggregate backend uuid
-  result    <- snd <$> runWriterT (flip runReaderT (value <$> agg) m)
   emittedAt <- liftIO getCurrentTime
+  agg       <- loadAggregate backend uuid
+  result    <- snd <$> runWriterT (flip runReaderT (aggregateValue <$> agg) m)
 
   -- For each event we've mapped, we want to encode and snapshot the
   -- result in our backing store.
@@ -76,12 +76,12 @@ runCommand backend uuid m = do
   let foldedEvents = foldEvents initialState result
   let encodeEvents = flip map foldedEvents $ \(event, Aggregate{..}) ->
         Event
-          { kind      = show (typeOf value)
-          , emitted   = show emittedAt
-          , version   = currentVersion
-          , eventName = show (toConstr event)
-          , eventBody = encodeToLazyText event
-          , snapshot  = encodeToLazyText value
+          { eventKind     = show (typeOf aggregateValue)
+          , eventEmitted  = show emittedAt
+          , eventVersion  = aggregateVersion
+          , eventName     = show (toConstr event)
+          , eventBody     = encodeToLazyText event
+          , eventSnapshot = encodeToLazyText aggregateValue
           }
 
   writeEvents backend uuid encodeEvents
