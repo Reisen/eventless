@@ -1,5 +1,5 @@
 name:       eventless
-version:    0.1.0.1
+version:    0.1.0.3
 github:     "reisen/eventless"
 license:    MIT
 author:     "Reisen"
@@ -29,6 +29,7 @@ dependencies:
     - sqlite-simple
     - text
     - time
+    - uuid
 
 default-extensions:
     - BangPatterns

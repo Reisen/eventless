@@ -1,11 +1,11 @@
 module Eventless.Types.Commands
   ( Command
-  ) where
+  )
+where
 
-
-import Protolude
-import Control.Monad.Writer.Lazy (WriterT, runWriterT)
-import Eventless.Types.Event
+import           Protolude
+import           Control.Monad.Writer.Lazy      ( WriterT )
+import           Eventless.Types.Event
 
 
 -- An actual command is just a function that has access to the current

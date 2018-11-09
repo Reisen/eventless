@@ -2,21 +2,23 @@ module Eventless.Commands
   ( emit
   , loadSnapshot
   , runCommand
-  ) where
+  )
+where
 
 
-import Protolude
-import Control.Monad.Writer         (MonadWriter (..))
-import Control.Monad.Writer.Lazy    (WriterT, runWriterT)
-import Data.Aeson                   (FromJSON, ToJSON)
-import Data.Aeson.Text              (encodeToLazyText)
-import Data.Data                    (Data, toConstr)
-import Data.Default.Class           (Default, def)
-import Data.Time.Clock              (getCurrentTime)
-import Data.Typeable                (Typeable, typeOf)
-import Eventless.Types.Aggregate
-import Eventless.Types.BackendStore
-import Eventless.Types.Event
+import           Protolude
+import           Control.Monad.Writer           ( MonadWriter(..) )
+import           Control.Monad.Writer.Lazy      ( WriterT, runWriterT )
+import           Data.Aeson                     ( FromJSON, ToJSON )
+import           Data.Aeson.Text                ( encodeToLazyText )
+import           Data.Data                      ( Data, toConstr )
+import           Data.Default.Class             ( Default, def )
+import           Data.Time.Clock                ( getCurrentTime )
+import           Data.Typeable                  ( Typeable, typeOf )
+import           Data.UUID                      ( UUID )
+import           Eventless.Types.Aggregate
+import           Eventless.Types.BackendStore
+import           Eventless.Types.Event
 
 
 -- An actual command is just a function that has access to the current
@@ -34,12 +36,14 @@ foldEvents
   -> t (Events agg)
   -> t (Events agg, Aggregate agg)
 
-foldEvents = (fmap . fmap $ snd) $ mapAccumL $ \Aggregate{..} event ->
-  (\agg -> (,) agg (event, agg)) Aggregate
-    { aggregateUUID    = aggregateUUID
-    , aggregateValue   = foldEvent aggregateValue event
-    , aggregateVersion = aggregateVersion + 1
-    }
+foldEvents =
+  (fmap . fmap $ snd)
+    $ mapAccumL
+    $ \Aggregate {..} event -> (\agg -> (,) agg (event, agg)) Aggregate
+        { aggregateUUID    = aggregateUUID
+        , aggregateValue   = foldEvent aggregateValue event
+        , aggregateVersion = aggregateVersion + 1
+        }
 
 
 type ProjectionContext agg m =
@@ -67,24 +71,23 @@ runCommand backend uuid m = do
   -- Use the backend to fetch a current aggregate, and produce a new event list
   -- from the passed command.
   emittedAt <- liftIO getCurrentTime
-  agg       <- loadAggregate backend uuid
+  agg       <- loadLatest backend uuid
   result    <- snd <$> runWriterT (flip runReaderT (aggregateValue <$> agg) m)
 
   -- For each event we've mapped, we want to encode and snapshot the
   -- result in our backing store.
   let initialState = fromMaybe (Aggregate uuid def 0) agg
   let foldedEvents = foldEvents initialState result
-  let encodeEvents = flip map foldedEvents $ \(event, Aggregate{..}) ->
-        Event
-          { eventKind     = show (typeOf aggregateValue)
-          , eventEmitted  = show emittedAt
-          , eventVersion  = aggregateVersion
-          , eventName     = show (toConstr event)
-          , eventBody     = encodeToLazyText event
-          , eventSnapshot = encodeToLazyText aggregateValue
-          }
+  let encodeEvents = flip map foldedEvents $ \(event, Aggregate {..}) -> Event
+        { eventKind     = show (typeOf aggregateValue)
+        , eventEmitted  = show emittedAt
+        , eventVersion  = aggregateVersion
+        , eventName     = show (toConstr event)
+        , eventBody     = encodeToLazyText event
+        , eventSnapshot = encodeToLazyText aggregateValue
+        }
 
-  writeEvents backend uuid encodeEvents
+  writeEventTransaction backend uuid encodeEvents
 
 
 -- Emit events into a log.

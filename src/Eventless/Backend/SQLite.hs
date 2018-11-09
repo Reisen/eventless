@@ -1,36 +1,36 @@
 module Eventless.Backend.SQLite
   ( makeSQLite3Backend
-  ) where
-
-import Protolude
-import Data.Aeson             (FromJSON, encode, decode)
-import Database.SQLite.Simple
-  ( Connection
-  , Only (..)
-  , open
-  , query
-  , execute
-  , execute_
-  , withTransaction
   )
+where
 
-import Eventless
-  ( Aggregate    (..)
-  , BackendStore (..)
-  , Event        (..)
-  , UUID
-  )
+import           Protolude
+import           Data.Aeson                     ( FromJSON, decode )
+import           Data.UUID                      ( UUID, toText )
+import           Database.SQLite.Simple         ( Connection
+                                                , Only(..)
+                                                , Query
+                                                , query
+                                                , execute
+                                                , execute_
+                                                , withTransaction
+                                                )
+
+import           Eventless                      ( Aggregate(..)
+                                                , BackendStore(..)
+                                                , Event(..)
+                                                )
 
 
 makeSQLite3Backend
   :: Connection
   -> BackendStore
 
-makeSQLite3Backend conn =
-  Backend
-    { loadAggregate  = sqliteLoadAggregate conn
-    , writeEvents    = sqliteWriteEvents conn
-    }
+makeSQLite3Backend conn = Backend
+  { loadLatest            = sqliteLoadLatest conn
+  , loadVersion           = sqliteLoadVersion conn
+  , writeEventTransaction = sqliteWriteEventTransaction conn
+  , writeSingleEvent      = sqliteWriteSingleEvent conn
+  }
 
 
 createEventsTable
@@ -42,16 +42,16 @@ createEventsTable =
   liftIO . flip execute_ sql_CreateEventsIfNoExist
 
 
-sqliteLoadAggregate
+sqliteLoadLatest
   :: FromJSON a
   => MonadIO m
   => Connection
   -> UUID
   -> m (Maybe (Aggregate a))
 
-sqliteLoadAggregate conn uuid = do
+sqliteLoadLatest conn uuid = do
   createEventsTable conn
-  result <- liftIO $ query conn sql_FetchLatestAggregateUUID (Only uuid)
+  result <- liftIO $ query conn sql_FetchLatestAggregateUUID (Only $ toText uuid)
   pure $ do
     (version, agg) <- head result
     decoded        <- decode (toS (agg :: Text))
@@ -62,7 +62,28 @@ sqliteLoadAggregate conn uuid = do
       }
 
 
-sqliteWriteEvents
+sqliteLoadVersion
+  :: FromJSON a
+  => MonadIO m
+  => Connection
+  -> UUID
+  -> Int
+  -> m (Maybe (Aggregate a))
+
+sqliteLoadVersion conn uuid targetVersion = do
+  createEventsTable conn
+  result <- liftIO $ query conn sql_FetchAggregateByVersion (toText uuid, targetVersion)
+  pure $ do
+    (version, agg) <- head result
+    decoded        <- decode (toS (agg :: Text))
+    pure Aggregate
+      { aggregateUUID    = uuid
+      , aggregateVersion = version
+      , aggregateValue   = decoded
+      }
+
+
+sqliteWriteEventTransaction
   :: Traversable t
   => MonadIO m
   => Connection
@@ -70,11 +91,26 @@ sqliteWriteEvents
   -> t Event
   -> m ()
 
-sqliteWriteEvents conn uuid events = do
+sqliteWriteEventTransaction conn uuid events = do
   createEventsTable conn
-  liftIO $ withTransaction conn $ for_ events $ \Event{..} ->
+  liftIO
+    $ withTransaction conn
+    $ for_ events
+    $ sqliteWriteSingleEvent conn uuid
+
+
+sqliteWriteSingleEvent
+  :: MonadIO m
+  => Connection
+  -> UUID
+  -> Event
+  -> m ()
+
+sqliteWriteSingleEvent conn uuid Event {..} = do
+  createEventsTable conn
+  liftIO $ withTransaction conn $
     execute conn sql_WriteEventForUUID
-      ( uuid
+      ( toText uuid
       , eventKind
       , eventEmitted
       , eventVersion
@@ -89,6 +125,7 @@ sqliteWriteEvents conn uuid events = do
 
 
 
+sql_CreateEventsIfNoExist :: Query
 sql_CreateEventsIfNoExist = "\
 \ CREATE TABLE IF NOT EXISTS events ( \
 \   uuid       TEXT     NOT NULL,     \
@@ -101,6 +138,7 @@ sql_CreateEventsIfNoExist = "\
 \ )"
 
 
+sql_FetchLatestAggregateUUID :: Query
 sql_FetchLatestAggregateUUID = "\
 \ SELECT version, snapshot FROM events \
 \ WHERE uuid = ?                       \
@@ -109,6 +147,17 @@ sql_FetchLatestAggregateUUID = "\
 \ "
 
 
+sql_FetchAggregateByVersion :: Query
+sql_FetchAggregateByVersion = "\
+\ SELECT version, snapshot FROM events \
+\ WHERE                                \
+\   uuid    = ? AND                    \
+\   version = ?                        \
+\ LIMIT 1                              \
+\ "
+
+
+sql_WriteEventForUUID :: Query
 sql_WriteEventForUUID = "   \
 \ INSERT INTO events        \
 \   ( uuid                  \

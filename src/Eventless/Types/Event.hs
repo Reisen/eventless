@@ -1,21 +1,13 @@
 module Eventless.Types.Event
-  ( Event     (..)
+  ( Event(..)
   , Events
   , Eventless
-  , Project   (..)
-  , UUID
-  ) where
+  , Project(..)
+  )
+where
 
-
-import Protolude
-import Control.Monad.Writer (MonadWriter)
-
-
--- Aggregates UUID's are GUUID's as far as possible. We
--- fix on a specific type so that this remains consistent
--- accross the entire identity store. This also cuts down
--- on abuse of ID type in event sourced systems.
-type UUID = Text
+import           Protolude
+import           Control.Monad.Writer           ( MonadWriter )
 
 
 -- The `Event` type represents the encoded resulting
