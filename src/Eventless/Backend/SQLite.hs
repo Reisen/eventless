@@ -29,7 +29,6 @@ makeSQLite3Backend conn = Backend
   { loadLatest            = sqliteLoadLatest conn
   , loadVersion           = sqliteLoadVersion conn
   , writeEventTransaction = sqliteWriteEventTransaction conn
-  , writeSingleEvent      = sqliteWriteSingleEvent conn
   }
 
 
@@ -93,22 +92,7 @@ sqliteWriteEventTransaction
 
 sqliteWriteEventTransaction conn uuid events = do
   createEventsTable conn
-  liftIO
-    $ withTransaction conn
-    $ for_ events
-    $ sqliteWriteSingleEvent conn uuid
-
-
-sqliteWriteSingleEvent
-  :: MonadIO m
-  => Connection
-  -> UUID
-  -> Event
-  -> m ()
-
-sqliteWriteSingleEvent conn uuid Event {..} = do
-  createEventsTable conn
-  liftIO $ withTransaction conn $
+  liftIO $ withTransaction conn $ for_ events $ \Event {..} ->
     execute conn sql_WriteEventForUUID
       ( toText uuid
       , eventKind

@@ -14,7 +14,6 @@ data BackendStore = Backend
   { loadLatest            :: LoadLatest
   , loadVersion           :: LoadVersion
   , writeEventTransaction :: WriteEventTransaction
-  , writeSingleEvent      :: WriteSingleEvent
   }
 
 
@@ -36,10 +35,4 @@ type WriteEventTransaction
   => Traversable t
   => UUID
   -> t Event
-  -> m ()
-
-type WriteSingleEvent
-  =  forall m. MonadIO m
-  => UUID
-  -> Event
   -> m ()

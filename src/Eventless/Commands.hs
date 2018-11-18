@@ -34,16 +34,14 @@ foldEvents
   => Traversable t
   => Aggregate agg
   -> t (Events agg)
-  -> t (Events agg, Aggregate agg)
+  -> (Aggregate agg, t (Events agg, Aggregate agg))
 
 foldEvents =
-  (fmap . fmap $ snd)
-    $ mapAccumL
-    $ \Aggregate {..} event -> (\agg -> (,) agg (event, agg)) Aggregate
-        { aggregateUUID    = aggregateUUID
-        , aggregateValue   = foldEvent aggregateValue event
-        , aggregateVersion = aggregateVersion + 1
-        }
+  mapAccumL $ \Aggregate {..} event -> (\agg -> (,) agg (event, agg)) Aggregate
+    { aggregateUUID    = aggregateUUID
+    , aggregateValue   = foldEvent aggregateValue event
+    , aggregateVersion = aggregateVersion + 1
+    }
 
 
 type ProjectionContext agg m =
@@ -65,7 +63,7 @@ runCommand
   => BackendStore              -- ^ A Backend context used to read/write events to.
   -> UUID                      -- ^ Which aggregate do we care about.
   -> Command agg m             -- ^ A Command that emits events.
-  -> m ()
+  -> m (Aggregate agg)         -- ^ Return the resulting aggregate.
 
 runCommand backend uuid m = do
   -- Use the backend to fetch a current aggregate, and produce a new event list
@@ -74,11 +72,18 @@ runCommand backend uuid m = do
   agg       <- loadLatest backend uuid
   result    <- snd <$> runWriterT (flip runReaderT (aggregateValue <$> agg) m)
 
-  -- For each event we've mapped, we want to encode and snapshot the
-  -- result in our backing store.
+  -- Use either the current aggregate state or a default.
   let initialState = fromMaybe (Aggregate uuid def 0) agg
+
+  -- Run the events over the aggregate.
   let foldedEvents = foldEvents initialState result
-  let encodeEvents = flip map foldedEvents $ \(event, Aggregate {..}) -> Event
+
+  -- Extract the final state and events that lead to it.
+  let currentState = fst foldedEvents
+  let resultEvents = snd foldedEvents
+
+  -- Encoded the resulting events to be written to the DB.
+  let encodeEvents = flip map resultEvents $ \(event, Aggregate {..}) -> Event
         { eventKind     = show (typeOf aggregateValue)
         , eventEmitted  = show emittedAt
         , eventVersion  = aggregateVersion
@@ -88,6 +93,7 @@ runCommand backend uuid m = do
         }
 
   writeEventTransaction backend uuid encodeEvents
+  pure currentState
 
 
 -- Emit events into a log.
