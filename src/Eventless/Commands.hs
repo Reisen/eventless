@@ -5,8 +5,13 @@ module Eventless.Commands
   )
 where
 
+--------------------------------------------------------------------------------
 
 import           Protolude
+import           Eventless.Types.Aggregate
+import           Eventless.Types.BackendStore
+import           Eventless.Types.Event
+
 import           Control.Monad.Writer           ( MonadWriter(..) )
 import           Control.Monad.Writer.Lazy      ( WriterT, runWriterT )
 import           Data.Aeson                     ( FromJSON, ToJSON )
@@ -16,25 +21,26 @@ import           Data.Default.Class             ( Default, def )
 import           Data.Time.Clock                ( getCurrentTime )
 import           Data.Typeable                  ( Typeable, typeOf )
 import           Data.UUID                      ( UUID )
-import           Eventless.Types.Aggregate
-import           Eventless.Types.BackendStore
-import           Eventless.Types.Event
 
+--------------------------------------------------------------------------------
 
--- An actual command is just a function that has access to the current
--- aggregate state and produces events based on this. In other words we just
--- run in the Eventless context.
+-- | An actual command is just a function that has access to the current
+-- | aggregate state and produces events based on this. In other words we just
+-- | run in the Eventless context.
+-- |
+-- | TODO: Use something more efficient than a list for event aggregation.
 type Command agg m = ReaderT (Maybe agg) (WriterT [Events agg] m) ()
 
+--------------------------------------------------------------------------------
 
--- Perform an Event fold. We thread the aggregate state through the folding
--- operation so we can store snapshots at each stage.
+-- | Perform an Event fold. We thread the aggregate state through the folding
+-- | operation so we can store snapshots at each stage.
 foldEvents
   :: Project agg
   => Traversable t
-  => Aggregate agg
-  -> t (Events agg)
-  -> (Aggregate agg, t (Events agg, Aggregate agg))
+  => Aggregate agg                                  -- ^ A starting state to work from.
+  -> t (Events agg)                                 -- ^ A list of events to apply/project.
+  -> (Aggregate agg, t (Events agg, Aggregate agg)) -- ^ A pair of the final result and all the intermediate states.
 
 foldEvents =
   mapAccumL $ \Aggregate {..} event -> (\agg -> (,) agg (event, agg)) Aggregate
@@ -43,34 +49,37 @@ foldEvents =
     , aggregateVersion = aggregateVersion + 1
     }
 
+--------------------------------------------------------------------------------
 
-type ProjectionContext agg m =
-  ( Default agg
-  , Project agg
-  , Typeable agg
-  , MonadIO m
-  , Data (Events agg)
-  , Typeable (Events agg)
-  , FromJSON agg, ToJSON agg
-  , FromJSON (Events agg), ToJSON (Events agg)
-  )
-
--- Run a command by executing the wrapping writer and reader monads around a
--- command, and then applying the resulting events to the latest snapshot that
--- has been loaded.
+-- | Run a command by executing the wrapping writer and reader monads around a
+-- | command, and then applying the resulting events to the latest snapshot that
+-- | has been loaded.
+-- |
+-- | TODO: Offer a way to handle failure.
+-- | TODO: Move away from using Default and provide a real mechanism for initialState.
+-- | TODO: Cull all these constraints.
 runCommand
-  :: ProjectionContext agg m   -- ^ ProjectionContext
-  => BackendStore              -- ^ A Backend context used to read/write events to.
-  -> UUID                      -- ^ Which aggregate do we care about.
-  -> Command agg m             -- ^ A Command that emits events.
-  -> m (Aggregate agg)         -- ^ Return the resulting aggregate.
+  :: MonadIO m                -- ^ Allows us to use our backends.
+  => Default agg              -- ^ First Event requires a default to project.
+  => Project agg              -- ^ Allows us to fold events.
+  => Typeable agg             -- ^ Allows us to get at the name of our aggregate.
+  => Data (Events agg)        -- ^ Allows us to use toConstr to get the name of our event.
+  => FromJSON agg             -- ^ Allows us to decode snapshots (for projecting).
+  => ToJSON agg               -- ^ Allows us to encode snapshots.
+  => FromJSON (Events agg)    -- ^ Allows us to decode events.
+  => ToJSON (Events agg)      -- ^ Allows us to encode events.
+
+  => BackendStore             -- ^ A Backend context used to read/write events to.
+  -> UUID                     -- ^ Which aggregate do we care about.
+  -> Command agg m            -- ^ A Command that emits events.
+  -> m (Aggregate agg)        -- ^ Return the resulting aggregate.
 
 runCommand backend uuid m = do
   -- Use the backend to fetch a current aggregate, and produce a new event list
   -- from the passed command.
   emittedAt <- liftIO getCurrentTime
   agg       <- loadLatest backend uuid
-  result    <- snd <$> runWriterT (flip runReaderT (aggregateValue <$> agg) m)
+  result    <- map snd . runWriterT . runReaderT m $ aggregateValue <$> agg
 
   -- Use either the current aggregate state or a default.
   let initialState = fromMaybe (Aggregate uuid def 0) agg
@@ -82,7 +91,7 @@ runCommand backend uuid m = do
   let currentState = fst foldedEvents
   let resultEvents = snd foldedEvents
 
-  -- Encoded the resulting events to be written to the DB.
+  -- Encode the resulting events to be written to the DB.
   let encodeEvents = flip map resultEvents $ \(event, Aggregate {..}) -> Event
         { eventKind     = show (typeOf aggregateValue)
         , eventEmitted  = show emittedAt
@@ -95,12 +104,15 @@ runCommand backend uuid m = do
   writeEventTransaction backend uuid encodeEvents
   pure currentState
 
+--------------------------------------------------------------------------------
 
--- Emit events into a log.
+-- | We are using the Writer monad as a way of collecting emited events, so we
+-- | can re-use the operation. We just rename it to make what we're doing more
+-- | intuitive.
 emit :: MonadWriter [a] m => a -> m ()
 emit v = tell [v]
 
-
--- View the current snapshot of the aggregate we are modifying.
+-- | Similar to emit, we're using the Reader monad to inject the current working
+-- | state during a command. Renamed just for intuition.
 loadSnapshot :: MonadReader r m => m r
 loadSnapshot = ask

@@ -1,9 +1,13 @@
 module Eventless.Backend.SQLite
-  ( makeSQLite3Backend
+  ( CommitHook
+  , makeSQLite3Backend
   )
 where
 
+--------------------------------------------------------------------------------
+
 import           Protolude
+
 import           Data.Aeson                     ( FromJSON, decode )
 import           Data.UUID                      ( UUID, toText )
 import           Database.SQLite.Simple         ( Connection
@@ -20,18 +24,31 @@ import           Eventless                      ( Aggregate(..)
                                                 , Event(..)
                                                 )
 
+--------------------------------------------------------------------------------
+
+-- | This is the type of a callback that user scan provide to be given access
+-- | to the _last_ projected aggregate on an event transaction. This gives users
+-- | the ability to write projected values to seperate stores they control.
+type CommitHook =
+  forall m. MonadIO m
+    => Text
+    -> m ()
 
 makeSQLite3Backend
-  :: Connection
+  :: CommitHook
+  -> Connection
   -> BackendStore
 
-makeSQLite3Backend conn = Backend
+makeSQLite3Backend hook conn = Backend
   { loadLatest            = sqliteLoadLatest conn
   , loadVersion           = sqliteLoadVersion conn
-  , writeEventTransaction = sqliteWriteEventTransaction conn
+  , writeEventTransaction = sqliteWriteEventTransaction conn hook
   }
 
+--------------------------------------------------------------------------------
 
+-- | Helper for creating the events table if it doesn't already exist. Runs
+-- | on every transaction.
 createEventsTable
   :: MonadIO m
   => Connection
@@ -40,6 +57,7 @@ createEventsTable
 createEventsTable =
   liftIO . flip execute_ sql_CreateEventsIfNoExist
 
+--------------------------------------------------------------------------------
 
 sqliteLoadLatest
   :: FromJSON a
@@ -86,11 +104,12 @@ sqliteWriteEventTransaction
   :: Traversable t
   => MonadIO m
   => Connection
+  -> CommitHook
   -> UUID
   -> t Event
   -> m ()
 
-sqliteWriteEventTransaction conn uuid events = do
+sqliteWriteEventTransaction conn hook uuid events = do
   createEventsTable conn
   liftIO $ withTransaction conn $ for_ events $ \Event {..} ->
     execute conn sql_WriteEventForUUID
@@ -103,11 +122,13 @@ sqliteWriteEventTransaction conn uuid events = do
       , eventSnapshot
       )
 
-
+  -- Fetch latest version of the aggregate to pipe to hook.
+  result <- liftIO $ query conn sql_FetchLatestAggregateUUID (Only $ toText uuid)
+  case head result of
+    Nothing                    -> pure ()
+    Just (_ :: Int, aggregate) -> hook (aggregate :: Text)
 
 -- SQL Statements --------------------------------------------------------------
-
-
 
 sql_CreateEventsIfNoExist :: Query
 sql_CreateEventsIfNoExist = "\
