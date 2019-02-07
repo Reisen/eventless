@@ -1,6 +1,5 @@
 module Eventless.Backend.SQLite
-  ( CommitHook
-  , makeSQLite3Backend
+  ( makeSQLite3Backend
   )
 where
 
@@ -26,23 +25,14 @@ import           Eventless                      ( Aggregate(..)
 
 --------------------------------------------------------------------------------
 
--- | This is the type of a callback that user scan provide to be given access
--- | to the _last_ projected aggregate on an event transaction. This gives users
--- | the ability to write projected values to seperate stores they control.
-type CommitHook =
-  forall m. MonadIO m
-    => Text
-    -> m ()
-
 makeSQLite3Backend
-  :: CommitHook
-  -> Connection
+  :: Connection
   -> BackendStore
 
-makeSQLite3Backend hook conn = Backend
+makeSQLite3Backend conn = Backend
   { loadLatest            = sqliteLoadLatest conn
   , loadVersion           = sqliteLoadVersion conn
-  , writeEventTransaction = sqliteWriteEventTransaction conn hook
+  , writeEventTransaction = sqliteWriteEventTransaction conn
   }
 
 --------------------------------------------------------------------------------
@@ -104,12 +94,11 @@ sqliteWriteEventTransaction
   :: Traversable t
   => MonadIO m
   => Connection
-  -> CommitHook
   -> UUID
   -> t Event
   -> m ()
 
-sqliteWriteEventTransaction conn hook uuid events = do
+sqliteWriteEventTransaction conn uuid events = do
   createEventsTable conn
   liftIO $ withTransaction conn $ for_ events $ \Event {..} ->
     execute conn sql_WriteEventForUUID
@@ -121,12 +110,6 @@ sqliteWriteEventTransaction conn hook uuid events = do
       , eventBody
       , eventSnapshot
       )
-
-  -- Fetch latest version of the aggregate to pipe to hook.
-  result <- liftIO $ query conn sql_FetchLatestAggregateUUID (Only $ toText uuid)
-  case head result of
-    Nothing                    -> pure ()
-    Just (_ :: Int, aggregate) -> hook (aggregate :: Text)
 
 -- SQL Statements --------------------------------------------------------------
 
