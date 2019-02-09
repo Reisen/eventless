@@ -18,7 +18,8 @@ import           Eventless                      ( Aggregate(..)
 
 type CommitHook =
   forall m. MonadIO m
-    => Event
+    => UUID
+    -> Event
     -> m ()
 
 hookMiddleware
@@ -26,7 +27,7 @@ hookMiddleware
   -> BackendStore
   -> BackendStore
 
-hookMiddleware hook backend = Backend
+hookMiddleware callback backend = Backend
   { loadLatest            = loadLatest backend
   , loadVersion           = loadVersion backend
   , writeEventTransaction = \uuid events -> do
@@ -34,5 +35,5 @@ hookMiddleware hook backend = Backend
       let final = getLast $ foldMapDefault (Last . Just) events
       case final of
         Nothing    -> pure ()
-        Just event -> hook event
+        Just event -> callback uuid event
   }

@@ -51,6 +51,18 @@ foldEvents =
 
 --------------------------------------------------------------------------------
 
+type CommandContext agg m =
+  ( Data (Events agg)        -- ^ Allows us to use toConstr to get the name of our event.
+  , Default agg              -- ^ First Event requires a default to project.
+  , FromJSON (Events agg)    -- ^ Allows us to decode events.
+  , FromJSON agg             -- ^ Allows us to decode snapshots (for projecting).
+  , MonadIO m                -- ^ Allows us to use our backends.
+  , Project agg              -- ^ Allows us to fold events.
+  , ToJSON (Events agg)      -- ^ Allows us to encode events.
+  , ToJSON agg               -- ^ Allows us to encode snapshots.
+  , Typeable agg             -- ^ Allows us to get at the name of our aggregate.
+  )
+
 -- | Run a command by executing the wrapping writer and reader monads around a
 -- | command, and then applying the resulting events to the latest snapshot that
 -- | has been loaded.
@@ -59,16 +71,7 @@ foldEvents =
 -- | TODO: Move away from using Default and provide a real mechanism for initialState.
 -- | TODO: Cull all these constraints.
 runCommand
-  :: MonadIO m                -- ^ Allows us to use our backends.
-  => Default agg              -- ^ First Event requires a default to project.
-  => Project agg              -- ^ Allows us to fold events.
-  => Typeable agg             -- ^ Allows us to get at the name of our aggregate.
-  => Data (Events agg)        -- ^ Allows us to use toConstr to get the name of our event.
-  => FromJSON agg             -- ^ Allows us to decode snapshots (for projecting).
-  => ToJSON agg               -- ^ Allows us to encode snapshots.
-  => FromJSON (Events agg)    -- ^ Allows us to decode events.
-  => ToJSON (Events agg)      -- ^ Allows us to encode events.
-
+  :: CommandContext agg m
   => BackendStore             -- ^ A Backend context used to read/write events to.
   -> UUID                     -- ^ Which aggregate do we care about.
   -> Command agg m            -- ^ A Command that emits events.
