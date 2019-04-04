@@ -13,6 +13,7 @@ description: Event Sourcing with automatic snapshotting.
 
 ghc-options:
     -Wall
+    -Werror
     -fwarn-tabs
     -fwarn-unused-imports
     -fwarn-missing-signatures

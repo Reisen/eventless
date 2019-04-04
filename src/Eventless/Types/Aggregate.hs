@@ -3,9 +3,10 @@ module Eventless.Types.Aggregate
   )
 where
 
-import           Protolude
-import           Data.UUID                      ( UUID )
+import Protolude
+import Data.UUID ( UUID )
 
+--------------------------------------------------------------------------------
 
 -- This wrapper is used when extracting aggregates from the database,
 -- it allows requesting the value itself as well as metrics about the

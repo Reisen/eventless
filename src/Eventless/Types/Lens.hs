@@ -14,13 +14,14 @@ module Eventless.Types.Lens
   )
 where
 
-import           Protolude
-import           Data.UUID                      ( UUID )
-import           Eventless.Types.Aggregate
-import           Eventless.Types.Event
+import Protolude
+import Data.UUID ( UUID )
+import Eventless.Types.Aggregate
+import Eventless.Types.Event
 
+--------------------------------------------------------------------------------
 
--- Simple Lens Types
+-- Simple Lens Types, so we don't have to rely on `lens`
 type Lens' s a = Lens s s a a
 type Lens s t a b = forall f. Functor f => (a -> f b) -> (s -> f t)
 
@@ -29,6 +30,7 @@ type Lens s t a b = forall f. Functor f => (a -> f b) -> (s -> f t)
 class HasVersion s a | s -> a where
   version :: Lens' s a
 
+--------------------------------------------------------------------------------
 
 -- Create Lenses for Event Fields
 kind :: Lens' Event Text
@@ -49,7 +51,7 @@ body l e = (\v -> e { eventBody = v }) <$> l (eventBody e)
 snapshot :: Lens' Event LText
 snapshot l e = (\v -> e { eventSnapshot = v }) <$> l (eventSnapshot e)
 
-
+--------------------------------------------------------------------------------
 
 -- Create Lenses for Aggregate Fields
 uuid :: Lens' (Aggregate a) UUID

@@ -6,9 +6,10 @@ module Eventless.Types.Event
   )
 where
 
-import           Protolude
-import           Control.Monad.Writer           ( MonadWriter )
+import Protolude
+import Control.Monad.Writer ( MonadWriter )
 
+--------------------------------------------------------------------------------
 
 -- The `Event` type represents the encoded resulting
 -- Event produced by a system. This is the type that we

@@ -1,27 +1,23 @@
 module Eventless.Backend.SQLite
   ( makeSQLite3Backend
-  )
-where
+  ) where
 
---------------------------------------------------------------------------------
+import Protolude
+import Data.Aeson             ( FromJSON, decode )
+import Data.UUID              ( UUID, toText )
+import Database.SQLite.Simple ( Connection
+                              , Only (..)
+                              , Query
+                              , query
+                              , execute
+                              , execute_
+                              , withTransaction
+                              )
 
-import           Protolude
-
-import           Data.Aeson                     ( FromJSON, decode )
-import           Data.UUID                      ( UUID, toText )
-import           Database.SQLite.Simple         ( Connection
-                                                , Only(..)
-                                                , Query
-                                                , query
-                                                , execute
-                                                , execute_
-                                                , withTransaction
-                                                )
-
-import           Eventless                      ( Aggregate(..)
-                                                , BackendStore(..)
-                                                , Event(..)
-                                                )
+import Eventless              ( Aggregate (..)
+                              , BackendStore (..)
+                              , Event (..)
+                              )
 
 --------------------------------------------------------------------------------
 
@@ -32,6 +28,7 @@ makeSQLite3Backend
 makeSQLite3Backend conn = Backend
   { loadLatest            = sqliteLoadLatest conn
   , loadVersion           = sqliteLoadVersion conn
+  , loadEvents            = sqliteLoadEvents conn
   , writeEventTransaction = sqliteWriteEventTransaction conn
   }
 
@@ -87,6 +84,26 @@ sqliteLoadVersion conn uuid targetVersion = do
       { aggregateUUID    = uuid
       , aggregateVersion = version
       , aggregateValue   = decoded
+      }
+
+
+sqliteLoadEvents
+  :: MonadIO m
+  => Connection
+  -> UUID
+  -> m [Event]
+
+sqliteLoadEvents conn uuid = do
+  createEventsTable conn
+  result <- liftIO $ query conn sql_FetchEventsByUUID (Only $ toText uuid)
+  pure $ result <&> \(kind, emitted, version, event, event_body, snapshot) -> do
+    Event
+      { eventKind     = kind
+      , eventEmitted  = emitted
+      , eventVersion  = version
+      , eventName     = event
+      , eventBody     = event_body
+      , eventSnapshot = snapshot
       }
 
 
@@ -158,4 +175,18 @@ sql_WriteEventForUUID = "   \
 \   )                       \
 \ VALUES                    \
 \   ( ?, ?, ?, ?, ?, ?, ? ) \
+\ "
+
+
+sql_FetchEventsByUUID :: Query
+sql_FetchEventsByUUID = "\
+\ SELECT ( kind          \
+\        , emitted       \
+\        , version       \
+\        , event         \
+\        , event_body    \
+\        , snapshot      \
+\        )               \
+\ FROM   events          \
+\ WHERE  uuid = ?        \
 \ "

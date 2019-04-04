@@ -1,25 +1,17 @@
 module Eventless.Backend.Hook
   ( hookMiddleware
-  )
-where
+  ) where
 
---------------------------------------------------------------------------------
-
-import           Protolude
-
-import           Data.Aeson                     ( FromJSON, decode )
-import           Data.UUID                      ( UUID, toText )
-import           Eventless                      ( Aggregate(..)
-                                                , BackendStore(..)
-                                                , Event(..)
-                                                )
+import Protolude
+import Data.UUID  ( UUID )
+import Eventless  ( BackendStore (..), Event (..) )
 
 --------------------------------------------------------------------------------
 
 type CommitHook =
-  forall m. MonadIO m
+  forall m t. MonadIO m
     => UUID
-    -> Event
+    -> t Event
     -> m ()
 
 hookMiddleware
@@ -30,10 +22,13 @@ hookMiddleware
 hookMiddleware callback backend = Backend
   { loadLatest            = loadLatest backend
   , loadVersion           = loadVersion backend
+
+  , loadEvents            = \uuid -> do
+      events <- loadEvents backend uuid
+      callback uuid events
+      pure events
+
   , writeEventTransaction = \uuid events -> do
       writeEventTransaction backend uuid events
-      let final = getLast $ foldMapDefault (Last . Just) events
-      case final of
-        Nothing    -> pure ()
-        Just event -> callback uuid event
+      callback uuid events
   }

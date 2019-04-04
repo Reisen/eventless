@@ -3,10 +3,11 @@ module Eventless.Types.Commands
   )
 where
 
-import           Protolude
-import           Control.Monad.Writer.Lazy      ( WriterT )
-import           Eventless.Types.Event
+import Protolude
+import Control.Monad.Writer.Lazy ( WriterT )
+import Eventless.Types.Event
 
+--------------------------------------------------------------------------------
 
 -- An actual command is just a function that has access to the current
 -- aggregate state and produces events based on this. In other words we just
