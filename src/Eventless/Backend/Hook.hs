@@ -10,6 +10,7 @@ import Eventless  ( BackendStore (..), Event (..) )
 
 type CommitHook =
   forall m t. MonadIO m
+    => Traversable t
     => UUID
     -> t Event
     -> m ()
