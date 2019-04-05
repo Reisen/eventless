@@ -4,11 +4,13 @@ module Eventless.Backend.SQLite
 
 import Protolude
 import Data.Aeson             ( FromJSON, decode )
-import Data.UUID              ( UUID, toText )
+import Data.UUID              ( UUID, toText, fromText )
 import Database.SQLite.Simple ( Connection
                               , Only (..)
+                              , fromOnly
                               , Query
                               , query
+                              , query_
                               , execute
                               , execute_
                               , withTransaction
@@ -29,6 +31,7 @@ makeSQLite3Backend conn = Backend
   { loadLatest            = sqliteLoadLatest conn
   , loadVersion           = sqliteLoadVersion conn
   , loadEvents            = sqliteLoadEvents conn
+  , loadAggregates        = sqliteLoadAggregates conn
   , writeEventTransaction = sqliteWriteEventTransaction conn
   }
 
@@ -107,6 +110,17 @@ sqliteLoadEvents conn uuid = do
       }
 
 
+sqliteLoadAggregates
+  :: MonadIO m
+  => Connection
+  -> m [UUID]
+
+sqliteLoadAggregates conn = do
+  createEventsTable conn
+  result :: [Only Text] <- liftIO $ query_ conn sql_FetchAggregateUUIDs
+  pure $ catMaybes $ fromText . fromOnly <$> result
+
+
 sqliteWriteEventTransaction
   :: Traversable t
   => MonadIO m
@@ -159,6 +173,13 @@ sql_FetchAggregateByVersion = "\
 \   uuid    = ? AND                    \
 \   version = ?                        \
 \ LIMIT 1                              \
+\ "
+
+
+sql_FetchAggregateUUIDs :: Query
+sql_FetchAggregateUUIDs = "\
+\ SELECT DISTINCT uuid     \
+\ FROM   events            \
 \ "
 
 

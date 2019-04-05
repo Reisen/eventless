@@ -19,6 +19,7 @@ data BackendStore = Backend
   { loadLatest            :: LoadLatest
   , loadVersion           :: LoadVersion
   , loadEvents            :: LoadEvents
+  , loadAggregates        :: LoadAggregates
   , writeEventTransaction :: WriteEventTransaction
   }
 
@@ -43,6 +44,11 @@ type LoadEvents
   =  forall m. MonadIO m
   => UUID
   -> m [Event]
+
+-- | Load all Aggregate UUIDs.
+type LoadAggregates
+  =  forall m. MonadIO m
+  => m [UUID]
 
 -- | Write all events into the backend store in a single transaction (can fail).
 type WriteEventTransaction
