@@ -28,10 +28,10 @@ makeSQLite3Backend
   -> BackendStore
 
 makeSQLite3Backend conn = Backend
-  { loadLatest            = sqliteLoadLatest conn
-  , loadVersion           = sqliteLoadVersion conn
+  { loadAggregates        = sqliteLoadAggregates conn
   , loadEvents            = sqliteLoadEvents conn
-  , loadAggregates        = sqliteLoadAggregates conn
+  , loadLatest            = sqliteLoadLatest conn
+  , loadVersion           = sqliteLoadVersion conn
   , writeEventTransaction = sqliteWriteEventTransaction conn
   }
 

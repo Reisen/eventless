@@ -16,10 +16,13 @@ import Eventless.Types.Event
 -- | requirement on consumers to use a new monad transformer or something
 -- | similar.
 data BackendStore = Backend
-  { loadLatest            :: LoadLatest
-  , loadVersion           :: LoadVersion
+  -- Direct Loads
+  { loadAggregates        :: LoadAggregates
   , loadEvents            :: LoadEvents
-  , loadAggregates        :: LoadAggregates
+  , loadLatest            :: LoadLatest
+  , loadVersion           :: LoadVersion
+
+  -- Writers
   , writeEventTransaction :: WriteEventTransaction
   }
 

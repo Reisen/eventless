@@ -21,25 +21,12 @@ hookMiddleware
   -> BackendStore
 
 hookMiddleware callback backend = Backend
-  { loadLatest            = loadLatest backend
+  { loadAggregates        = loadAggregates backend
+  , loadEvents            = loadEvents backend
+  , loadLatest            = loadLatest backend
   , loadVersion           = loadVersion backend
-  , loadAggregates        = loadAggregates backend
-  , loadEvents            = hookLoadEvents callback backend
   , writeEventTransaction = hookWriteEventTransaction callback backend
   }
-
-
-hookLoadEvents
-  :: MonadIO m
-  => CommitHook
-  -> BackendStore
-  -> UUID
-  -> m [Event]
-
-hookLoadEvents callback backend uuid = do
-  events <- loadEvents backend uuid
-  callback uuid events
-  pure events
 
 
 hookWriteEventTransaction
