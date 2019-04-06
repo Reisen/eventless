@@ -145,34 +145,35 @@ sqliteWriteEventTransaction conn uuid events = do
 -- SQL Statements --------------------------------------------------------------
 
 sql_CreateEventsIfNoExist :: Query
-sql_CreateEventsIfNoExist = "\
-\ CREATE TABLE IF NOT EXISTS events ( \
-\   uuid       TEXT     NOT NULL,     \
-\   kind       TEXT     NOT NULL,     \
-\   emitted    TEXT     NOT NULL,     \
-\   version    INTEGER  NOT NULL,     \
-\   event      TEXT     NOT NULL,     \
-\   event_body TEXT     NOT NULL,     \
-\   snapshot   TEXT     NOT NULL      \
-\ )"
+sql_CreateEventsIfNoExist = "       \
+\ CREATE TABLE IF NOT EXISTS events \
+\   ( uuid       TEXT     NOT NULL  \
+\   , kind       TEXT     NOT NULL  \
+\   , emitted    TEXT     NOT NULL  \
+\   , version    INTEGER  NOT NULL  \
+\   , event      TEXT     NOT NULL  \
+\   , event_body TEXT     NOT NULL  \
+\   , snapshot   TEXT     NOT NULL  \
+\   )"
 
 
 sql_FetchLatestAggregateUUID :: Query
 sql_FetchLatestAggregateUUID = "\
-\ SELECT version, snapshot FROM events \
-\ WHERE uuid = ?                       \
-\ ORDER BY version DESC                \
-\ LIMIT 1                              \
+\ SELECT    version, snapshot   \
+\ FROM      events              \
+\ WHERE     uuid = ?            \
+\ ORDER BY  version DESC        \
+\ LIMIT     1                   \
 \ "
 
 
 sql_FetchAggregateByVersion :: Query
 sql_FetchAggregateByVersion = "\
-\ SELECT version, snapshot FROM events \
-\ WHERE                                \
-\   uuid    = ? AND                    \
-\   version = ?                        \
-\ LIMIT 1                              \
+\ SELECT version, snapshot     \
+\ FROM   events                \
+\ WHERE  uuid    = ?           \
+\ AND    version = ?           \
+\ LIMIT  1                     \
 \ "
 
 
@@ -201,13 +202,12 @@ sql_WriteEventForUUID = "   \
 
 sql_FetchEventsByUUID :: Query
 sql_FetchEventsByUUID = "\
-\ SELECT ( kind          \
-\        , emitted       \
-\        , version       \
-\        , event         \
-\        , event_body    \
-\        , snapshot      \
-\        )               \
+\ SELECT kind            \
+\      , emitted         \
+\      , version         \
+\      , event           \
+\      , event_body      \
+\      , snapshot        \
 \ FROM   events          \
 \ WHERE  uuid = ?        \
 \ "
